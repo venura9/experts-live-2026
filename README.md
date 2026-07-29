@@ -1,6 +1,6 @@
 # Experts Live 2026
 
-### AI where your IP lives
+### Foundry Local: using AI to solve real life problems
 
 Running language models on hardware you already control, for organisations that
 cannot send their code to an AI service.

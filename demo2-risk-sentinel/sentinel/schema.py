@@ -27,7 +27,15 @@ Respond with a single JSON object and nothing else. No prose, no code fences.
 Rules you must not break:
 - halt=true requires severity of low, medium or high.
 - halt=false requires severity "none".
-- reason must be under 140 characters and quote the announcement, not invent facts."""
+- reason must be your own short summary of WHY you decided, under 120
+  characters. Do not copy or restate the announcement text. Ground it in what
+  the announcement actually says; do not invent facts.
+
+Examples of a good reason:
+  "Exchange reports an unscheduled incident affecting execution"
+  "Routine notice with no stated trading impact"
+  "Wording is ambiguous about whether trading is affected"
+"""
 
 
 class SchemaError(ValueError):
@@ -94,8 +102,11 @@ def parse(text):
     reason = obj["reason"]
     if not isinstance(reason, str) or not reason.strip():
         raise SchemaError("reason is empty")
-    if len(reason) > 140:
-        raise SchemaError(f"reason too long: {len(reason)} chars")
+    # The prompt asks for under 120. The gate accepts up to 200 so a marginally
+    # chatty answer does not cost a retry, while a model that has simply echoed
+    # the announcement back still gets rejected.
+    if len(reason) > 200:
+        raise SchemaError(f"reason too long: {len(reason)} chars, likely echoing the announcement")
 
     # Contradiction checks. These catch the failure mode small models actually
     # have: fluent output that disagrees with itself.

@@ -33,6 +33,24 @@
 #      only after you have measured it.
 #   3. Keep the review scope tight. Path filters are not a nicety on a hosted
 #      agent, they are what keeps you inside the timeout.
+#
+# LAYOUT ASSUMPTION (same as azure-pipelines.yml)
+#   This runs from the root of the repo holding the MuleSoft app. Copy the
+#   review tooling in beside it:
+#
+#     order-api/
+#       src/main/mule/...          <- from seed_flaws.py
+#       pom.xml
+#       scripts/ai_review.py
+#       scripts/ai_review_sdk.py
+#       prompts/mulesoft-review.md
+#       review-paths.txt
+#       hosted-requirements.txt
+#       azure-pipelines.yml
+#       azure-pipelines-hosted.yml
+#
+#   Azure DevOps checks out one repo per pipeline, so the reviewer has to live
+#   with the code it reviews.
 # ---------------------------------------------------------------------------
 
 trigger: none
@@ -103,7 +121,6 @@ jobs:
           pip install --cache-dir "$PIP_CACHE_DIR" -r hosted-requirements.txt
           python -c "import foundry_local, openai; print('sdk ready')"
         displayName: Install Foundry Local SDK
-        workingDirectory: $(Build.SourcesDirectory)/demo1-ado-review
 
       - script: |
           set -euo pipefail
@@ -112,7 +129,6 @@ jobs:
             --diff-base "$SYSTEM_PULLREQUEST_TARGETBRANCH" \
             --fail-on blocker
         displayName: Review the diff with a local model
-        workingDirectory: $(Build.SourcesDirectory)/demo1-ado-review
         env:
           # Mapped explicitly. Azure DevOps does not expose this to scripts
           # otherwise, and the PR comments will fail with a 203 without it.

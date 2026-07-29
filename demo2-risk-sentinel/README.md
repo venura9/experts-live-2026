@@ -91,6 +91,21 @@ FOUNDRY_URL=http://localhost:9999/v1 python3 run.py bot --cycles 3 --interval 0 
 If the second block ever places an order, the demo is broken and the thesis of
 the talk is wrong on stage. Do not present until it reads zero.
 
+## If a classification is REJECTED for reason length
+
+The prompt used to say the reason must be under 140 characters **and** quote the
+announcement. A small model cannot satisfy both, so it copies the announcement,
+which blows the limit and costs you a retry on stage.
+
+The prompt now asks for the model's own summary of why it decided, explicitly
+tells it not to restate the announcement, and gives three worked examples. The
+validator accepts up to 200 characters so a slightly chatty answer is not
+rejected, while a full echo of the announcement still is.
+
+If you still see rejections on a different model, look at the raw output in the
+ledger before changing the limit. A model that echoes is a prompt problem; a
+model that writes 300 characters of reasoning is a model-choice problem.
+
 ## Why the heartbeat exists
 
 The bot loop reads the latest classification from the ledger; it does not call

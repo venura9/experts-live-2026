@@ -21,6 +21,18 @@ notes, `t` starts the talk timer in the left rail, `b` flips the boundary
 indicator to blocked when you go into aeroplane mode. No network needed, which
 is the point.
 
+## The repo is on screen three times
+
+| Slide | Why there |
+|---|---|
+| 0:00 title | On screen while the room fills. Earliest possible, and the only one people have time to act on before you start talking |
+| 0:10 install | The moment someone decides they want to try it. Demo 2 runs with `--mock`, so they can follow with nothing installed |
+| 0:50 links | The takeaway, large. Leave it up through Q&A |
+
+Say it out loud at 0:00, do not just leave it on screen. "Everything is already up
+there, clone it now if you want to follow along." A QR nobody is told about is a
+QR nobody scans.
+
 ## Demo 1 now covers two scenarios
 
 The repo ships two pipelines against the same script, prompt and model:

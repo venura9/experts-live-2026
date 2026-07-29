@@ -1,0 +1,3 @@
+We are investigating an unscheduled incident affecting order matching for several
+pairs. Withdrawal processing is delayed. Engineers are engaged and we will provide
+an update within the hour.

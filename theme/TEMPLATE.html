@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHANGE ME</title>
+
+<!-- Two files, no network. Copy the theme/ folder next to this file.
+     If you want one portable file to email or drop on a USB stick,
+     paste theme.css inside <style> and deck.js inside <script>. -->
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+
+<!-- ============ LEFT RAIL. Same on every deck. Edit the two labels. ============ -->
+<div id="rail">
+  <span class="vert">CHANGE ME</span>
+  <span id="dot"></span>
+  <span id="clock">00:00</span>
+</div>
+
+<!-- ============ SLIDES ============
+     Every <section class="slide"> is one slide, in order.
+       data-t     target time, shows bottom right so you know if you are behind
+       data-seg   segment name, shows bottom left
+       data-notes speaker notes, press n
+     ============================================================ -->
+
+<!-- TITLE -->
+<section class="slide" data-t="0:00" data-seg="Open" data-notes="Replace this slide first. Say the one-line version of the talk out loud before the title lands, so the room knows what they are here for.">
+  <div class="eyebrow">Your event &middot; Azure &amp; AI &middot; your date</div>
+  <h1>The talk title goes here</h1>
+  <p class="lede">One sentence that says what the room gets. <strong>Bold the half that matters.</strong></p>
+</section>
+
+<!-- WHO AM I. Keep it to twenty seconds. -->
+<section class="slide" data-t="0:01" data-seg="Who" data-notes="Twenty seconds. The line that earns its place is the one giving you standing on this subject, not the job title.">
+  <div class="eyebrow">Who</div>
+  <h2>Venura Athukorala</h2>
+  <div class="whoami">
+    <div class="mark"><img src="me.jpg" alt="" onerror="this.remove()">VA</div>
+    <dl>
+      <dt>Day job</dt><dd>Engineering Director, PwC Australia, Melbourne</dd>
+      <dt>I work on</dt><dd>Engineering, Cloud, AI</dd>
+      <dt>Community</dt><dd>Founder, Azure Builders Melbourne &nbsp;&middot;&nbsp; Lead organiser, Experts Live</dd>
+      <dt>Also</dt><dd>Dad. Part-time artist manager.</dd>
+      <dt>Find me</dt><dd class="mono">venura9 &nbsp;&middot;&nbsp; github.com/venura9 &nbsp;&middot;&nbsp; venura9.dev</dd>
+    </dl>
+  </div>
+  <p class="disclaimer">Applied common sense in the cloud. Views are my own, not my employer's.</p>
+</section>
+
+<!-- BIG NUMBERS. Two to four, never more. -->
+<section class="slide" data-t="0:03" data-seg="Problem" data-notes="Land one number. The rest are supporting cast.">
+  <div class="eyebrow">The problem <span class="cls">div.stats &middot; div.stat.hero</span></div>
+  <h2>A number they cannot argue with</h2>
+  <div class="stats">
+    <div class="stat hero"><div class="n">39.7%</div><div class="l">the headline one</div></div>
+    <div class="stat"><div class="n">93%</div><div class="l">supporting</div></div>
+    <div class="stat"><div class="n">47%</div><div class="l">supporting</div></div>
+  </div>
+  <p class="lede">Source and year, on the slide, always.</p>
+</section>
+
+<!-- BULLETS. Cap at five. -->
+<section class="slide" data-t="0:06" data-seg="Detail" data-notes="Do not read these out. Say the thing each one is shorthand for.">
+  <div class="eyebrow">Making it real <span class="cls">ul.pts</span></div>
+  <h2>Five is the ceiling</h2>
+  <ul class="pts">
+    <li><b>Lead in bold.</b> Then the explanation in plain text</li>
+    <li><b>Second point.</b> Short enough to read from the back row</li>
+    <li><b>Third point.</b> If you need a sixth, you need a second slide</li>
+  </ul>
+</section>
+
+<!-- TABLE. Use td.yes / td.no / td.mono for colour. -->
+<section class="slide" data-t="0:09" data-seg="Detail" data-notes="Tables are for comparisons people will photograph. Keep to four columns.">
+  <div class="eyebrow">Comparison <span class="cls">table &middot; td.yes / td.no / td.mono</span></div>
+  <h2>When to use what</h2>
+  <table>
+    <tr><th>Situation</th><th>Answer</th><th>Supported</th></tr>
+    <tr><td>First case</td><td class="mono">the tool</td><td class="yes">Yes</td></tr>
+    <tr><td>Second case</td><td class="mono">something else</td><td class="no">No</td></tr>
+  </table>
+</section>
+
+<!-- CODE. span.c is a comment, span.k is a highlight. -->
+<section class="slide" data-t="0:11" data-seg="Detail" data-notes="If it does not fit without scrolling, it is too much code for a slide.">
+  <div class="eyebrow">How <span class="cls">pre &middot; span.c / span.k</span></div>
+  <h2>Commands they can actually type</h2>
+  <pre><span class="c"># a comment</span>
+some --command <span class="k">--important-flag</span>
+another --command</pre>
+</section>
+
+<!-- ONE BIG IDEA. The slide people photograph. -->
+<section class="slide" data-t="0:14" data-seg="Thesis" data-notes="Biggest font in the deck. Say it, pause, then move on. Do not explain it.">
+  <div class="eyebrow">The point <span class="cls">div.invariant</span></div>
+  <div class="invariant">
+    <p><span class="a">The thing it can do.</span> <span class="b">The thing it can never do.</span></p>
+  </div>
+</section>
+
+<!-- LIVE DEMO placeholder. Leave it up while you switch windows. -->
+<section class="slide" data-t="0:17" data-seg="Demo" data-notes="Switch to the terminal now. This slide exists so the screen is not blank while you alt-tab.">
+  <div class="live">Live</div>
+  <h2>What they are about to watch</h2>
+  <div class="checklist">
+    <b>1</b> first thing you will do<br>
+    <b>2</b> second thing<br>
+    <b>3</b> the moment that matters
+  </div>
+</section>
+
+<!-- CLOSE -->
+<section class="slide" data-t="0:24" data-seg="Close" data-notes="Repeat the framework. Repetition is how it survives the walk to the car park.">
+  <div class="eyebrow">Take this with you <span class="cls">div.live &middot; div.checklist</span></div>
+  <h2>The one thing to remember</h2>
+  <p class="lede">Then the links slide, then questions.</p>
+</section>
+
+<!-- ============ CHROME. Do not edit below. ============ -->
+<div id="foot"><span id="seg"></span><span id="pos"></span></div>
+<div id="bar"></div>
+<div id="notes"><h4>Speaker notes</h4><div id="ntext"></div></div>
+<div id="overview"><h4>All slides &middot; click one to jump &middot; g or esc to close</h4><div id="ogrid"></div></div>
+<div id="jump"></div>
+<div id="help">space forward &middot; left arrow or right-click back &middot; <b>g</b> all slides &middot; type a number to jump &middot; n notes &middot; t timer</div>
+<script src="deck.js"></script>
+</body>
+</html>

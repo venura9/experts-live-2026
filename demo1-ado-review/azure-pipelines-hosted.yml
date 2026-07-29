@@ -1,0 +1,126 @@
+# AI peer review on a MICROSOFT-HOSTED agent.
+#
+# Companion to azure-pipelines.yml, which runs on a self-hosted agent.
+# Same review, same model, different trust argument:
+#
+#   self-hosted  ->  "our code never leaves our network"
+#   hosted       ->  "we add no new vendor to our supply chain"
+#
+# The second claim is the one most enterprises actually need. If your repo is
+# already in Azure DevOps, Microsoft is already a processor for that code and it
+# is already running in their cloud. Loading a model in-process on the same
+# agent expands the trust boundary by zero. Calling a third-party AI API from
+# the same pipeline does not: that is a new vendor, a new DPA, a new egress
+# rule, and in a regulated shop, months of process.
+#
+# ---------------------------------------------------------------------------
+# HOSTED AGENT LIMITS (verified against Microsoft Learn, July 2026)
+# ---------------------------------------------------------------------------
+#   CPU            2 cores (Standard_DS2_v2). No GPU, no NPU. CPU EP only.
+#   RAM            7 GB total; Linux jobs run in a cgroup with 6 GB physical
+#   Disk           14 GB SSD, at least 10 GB free for your job
+#   Job timeout    60 min on a PRIVATE repo (free tier)
+#                  360 min on a public repo, or private with paid parallel jobs
+#   Lifetime       fresh VM per job, discarded afterwards
+#
+# Three consequences that shape this file:
+#
+#   1. The model re-downloads on every run unless you cache it. That is what the
+#      Cache@2 task below is for. Without it you burn several minutes and a
+#      chunk of your 60 on a download you already did yesterday.
+#   2. Pick a SMALL model. On 2 CPU cores a 3.8B model reviewing several files
+#      will eat your timeout. qwen2.5-0.5b is the safe default here; move up
+#      only after you have measured it.
+#   3. Keep the review scope tight. Path filters are not a nicety on a hosted
+#      agent, they are what keeps you inside the timeout.
+# ---------------------------------------------------------------------------
+
+trigger: none
+
+# Azure Repos does not honour a `pr:` trigger. Wire this as a BUILD VALIDATION
+# policy on the target branch instead. Same trap as the self-hosted pipeline.
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  # Small on purpose. See consequence 2 above.
+  FOUNDRY_MODEL: qwen2.5-0.5b
+  # Where foundry-local-core keeps downloaded models, so we can cache it.
+  FOUNDRY_CACHE: $(Pipeline.Workspace)/.foundry-cache
+  PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip-cache
+
+jobs:
+  - job: ai_review_hosted
+    displayName: AI peer review (hosted agent, local inference)
+
+    # Explicit, and inside the free-tier private-repo ceiling. Setting this
+    # higher than the hosted maximum has no effect: the platform cap wins.
+    timeoutInMinutes: 55
+
+    steps:
+      - checkout: self
+        # Need history for the three-dot diff against the target branch.
+        fetchDepth: 0
+        persistCredentials: true
+
+      - task: UsePythonVersion@0
+        displayName: Python 3.11
+        inputs:
+          versionSpec: '3.11'
+
+      - script: |
+          echo "--- agent shape ---"
+          nproc
+          free -h
+          df -h /
+        displayName: Show agent limits
+        # Worth keeping in the demo. When you run this live, the room sees
+        # 2 cores and ~10 GB free, and understands immediately why the model
+        # choice matters.
+
+      # Cache the pip wheels. foundry-local-core plus ONNX Runtime is a chunky
+      # download and it does not change between runs.
+      - task: Cache@2
+        displayName: Cache pip
+        inputs:
+          key: 'pip | "$(Agent.OS)" | hosted-requirements.txt'
+          path: $(PIP_CACHE_DIR)
+
+      # Cache the model weights. This is the one that matters. Without it the
+      # model downloads on every single run and you lose minutes you do not
+      # have.
+      - task: Cache@2
+        displayName: Cache Foundry Local model
+        inputs:
+          key: 'foundry | "$(Agent.OS)" | "$(FOUNDRY_MODEL)"'
+          path: $(FOUNDRY_CACHE)
+
+      - script: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install --cache-dir "$PIP_CACHE_DIR" -r hosted-requirements.txt
+          python -c "import foundry_local, openai; print('sdk ready')"
+        displayName: Install Foundry Local SDK
+        workingDirectory: $(Build.SourcesDirectory)/demo1-ado-review
+
+      - script: |
+          set -euo pipefail
+          df -h / | tail -1
+          python3 scripts/ai_review_sdk.py \
+            --diff-base "$SYSTEM_PULLREQUEST_TARGETBRANCH" \
+            --fail-on blocker
+        displayName: Review the diff with a local model
+        workingDirectory: $(Build.SourcesDirectory)/demo1-ado-review
+        env:
+          # Mapped explicitly. Azure DevOps does not expose this to scripts
+          # otherwise, and the PR comments will fail with a 203 without it.
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+          FOUNDRY_MODEL: $(FOUNDRY_MODEL)
+          # Point the SDK's model cache at the cached directory.
+          FOUNDRY_LOCAL_CACHE_DIR: $(FOUNDRY_CACHE)
+
+      # No `condition: always()`. If the review step fails the job fails, the
+      # build validation policy fails, and the merge is blocked. A review that
+      # did not happen is not a pass.

@@ -1,0 +1,5 @@
+# Dependencies for the hosted-agent pipeline (azure-pipelines-hosted.yml).
+# The self-hosted pipeline uses scripts/ai_review.py, which is stdlib only and
+# needs none of this.
+foundry-local-sdk
+openai

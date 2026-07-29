@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Demo runtime state. The ledger is regenerated on every run and a stale one
+# will feed the gate a fresh-looking CLEAR, which hides the whole point.
+demo2-risk-sentinel/state/
+*.jsonl
+
+# Build artefacts
+*.zip
+foundry-local-talk.zip
+
+# Generated MuleSoft app. Run seed_flaws.py to produce it, then commit it to
+# YOUR demo repo, not to this one.
+order-api/
+
+# Local
+.DS_Store
+.env
+.notes/

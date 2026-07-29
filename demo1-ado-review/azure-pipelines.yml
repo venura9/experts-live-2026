@@ -1,0 +1,42 @@
+# AI peer review with Foundry Local. Inference happens on the build agent.
+#
+# IMPORTANT: the `pr:` trigger keyword does NOT work for Azure Repos. Wire this
+# up as a branch policy build validation on main instead. See README step A5.
+
+trigger: none          # PR validation only, never on plain pushes
+
+pool:
+  name: local-ai       # self-hosted pool with Foundry Local installed
+
+variables:
+  # Use the FULL model ID from /v1/models, not the alias. Override in the
+  # pipeline variables UI when you swap models.
+  FOUNDRY_MODEL: 'phi-4-mini'
+  FOUNDRY_URL: 'http://localhost:5273/v1'
+
+steps:
+  - checkout: self
+    fetchDepth: 0      # the diff needs history
+
+  - script: |
+      set -e
+      echo "agent: $(hostname)"
+      curl -sf "$FOUNDRY_URL/models" | python3 -m json.tool | head -20
+    displayName: 'Verify local model endpoint'
+    env:
+      FOUNDRY_URL: $(FOUNDRY_URL)
+
+  - script: |
+      set -e
+      git fetch origin "$SYSTEM_PULLREQUEST_TARGETBRANCH" --depth=200 || git fetch origin main
+      python3 scripts/ai_review.py --fail-on blocker
+    displayName: 'AI peer review (local inference)'
+    env:
+      FOUNDRY_URL: $(FOUNDRY_URL)
+      FOUNDRY_MODEL: $(FOUNDRY_MODEL)
+      # SYSTEM_ACCESSTOKEN is not exposed to scripts unless you map it here.
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+  # Fail closed. If the review step failed for ANY reason, including the model
+  # being unreachable, the build fails and branch policy blocks the merge.
+  # A review that did not happen is not a pass.

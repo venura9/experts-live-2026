@@ -1,0 +1,158 @@
+/* ============================================================
+   Venura's deck theme. Offline-safe by design: no web fonts,
+   no CDN, no network. Drop this next to your HTML and link it,
+   or paste it inline if you want a single portable file.
+
+   Change the six colours in :root and the whole deck follows.
+   ============================================================ */
+
+/* Offline-safe by design: no web fonts, no CDN, no network.
+   A deck about local inference should not need the venue wifi. */
+:root{
+  --ink:#0B121C; --panel:#131E2C; --line:#26374B;
+  --paper:#F2EFE7; --dim:#8FA3B8;
+  --clear:#66D6A6; --signal:#F0A536; --stop:#E8654B;
+  /* One cool accent, used in two quiet places only: the rail edge and the
+     title-slide motif. Not a logo, and never the same weight as the status
+     colours above, which carry meaning. */
+  --azure:#4FA8E8;
+  --rail:104px;
+  --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--ink);color:var(--paper);font-family:var(--sans)}
+
+/* ---- the boundary rail: everything in this talk happens inside this line ---- */
+#rail{position:fixed;left:0;top:0;bottom:0;width:var(--rail);border-right:2px solid var(--line);
+  border-image:linear-gradient(180deg,var(--azure) 0%,var(--line) 34%,var(--line) 100%) 1;
+  display:flex;flex-direction:column;justify-content:space-between;align-items:center;
+  padding:26px 0;font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--dim);z-index:5}
+#rail .vert{writing-mode:vertical-rl;transform:rotate(180deg);text-transform:uppercase}
+#dot{width:12px;height:12px;border-radius:50%;background:var(--clear);box-shadow:0 0 0 5px rgba(102,214,166,.14)}
+body.egress-blocked #dot{background:var(--signal);box-shadow:0 0 0 5px rgba(240,165,54,.16)}
+#clock{font-variant-numeric:tabular-nums}
+body.timer-idle #clock{opacity:.35}
+
+/* ---- slides ---- */
+.slide{position:absolute;inset:0;padding:72px 80px 92px calc(var(--rail) + 72px);
+  display:none;flex-direction:column;justify-content:center}
+.slide.on{display:flex}
+.slide.on>*{animation:rise .34s cubic-bezier(.2,.7,.3,1) both}
+.slide.on>*:nth-child(2){animation-delay:.05s}
+.slide.on>*:nth-child(3){animation-delay:.1s}
+.slide.on>*:nth-child(4){animation-delay:.15s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.slide.on>*{animation:none}}
+
+.eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:26px}
+/* Only used in TEMPLATE.html: names the class each demo slide shows off.
+   Delete the spans when you start a real deck. */
+.eyebrow .cls{letter-spacing:.06em;text-transform:none;color:var(--line);margin-left:14px}
+h1{font-size:clamp(44px,6.4vw,92px);line-height:.98;letter-spacing:-.035em;font-weight:800;max-width:20ch}
+h2{font-size:clamp(32px,4.4vw,62px);line-height:1.03;letter-spacing:-.028em;font-weight:800;max-width:22ch}
+.lede{font-size:clamp(19px,2.1vw,29px);line-height:1.42;max-width:46ch;color:var(--dim);margin-top:26px}
+.lede strong{color:var(--paper);font-weight:600}
+h1+.lede{margin-top:32px}
+
+ul.pts{list-style:none;margin-top:34px;max-width:56ch}
+ul.pts li{font-size:clamp(18px,2vw,26px);line-height:1.4;padding:14px 0 14px 30px;
+  border-top:1px solid var(--line);position:relative}
+ul.pts li:last-child{border-bottom:1px solid var(--line)}
+ul.pts li::before{content:"";position:absolute;left:0;top:24px;width:14px;height:2px;background:var(--dim)}
+ul.pts li b{font-weight:700}
+
+table{border-collapse:collapse;margin-top:30px;font-size:clamp(14px,1.4vw,19px);width:100%;max-width:1000px}
+th,td{text-align:left;padding:11px 18px 11px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);font-weight:500}
+td.yes{color:var(--clear)} td.no{color:var(--stop)} td.mono{font-family:var(--mono)}
+
+pre{background:var(--panel);border-left:3px solid var(--line);padding:22px 26px;margin-top:28px;
+  font-family:var(--mono);font-size:clamp(13px,1.35vw,19px);line-height:1.65;overflow:auto;max-width:1000px}
+pre .c{color:var(--dim)} pre .k{color:var(--signal)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2px;margin-top:34px;max-width:1050px}
+.stat{background:var(--panel);padding:26px 24px}
+.stat .n{font-size:clamp(34px,4.4vw,58px);font-weight:800;letter-spacing:-.03em;line-height:1}
+.stat .l{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-top:12px}
+.stat.hero .n{color:var(--clear)}
+
+.invariant{border:2px solid var(--signal);padding:38px 42px;margin-top:12px;max-width:24ch}
+.invariant p{font-size:clamp(30px,4vw,54px);font-weight:800;line-height:1.06;letter-spacing:-.028em}
+.invariant .a{color:var(--clear)} .invariant .b{color:var(--stop)}
+
+.live{font-family:var(--mono);font-size:clamp(16px,1.8vw,22px);letter-spacing:.3em;color:var(--signal);
+  text-transform:uppercase;margin-bottom:24px}
+.checklist{margin-top:30px;font-family:var(--mono);font-size:clamp(14px,1.5vw,20px);line-height:2;color:var(--dim)}
+.checklist b{color:var(--paper);font-weight:600}
+
+.whoami{display:grid;grid-template-columns:auto 1fr;gap:0 46px;align-items:start;margin-top:30px}
+.whoami .mark{width:112px;height:112px;border:2px solid var(--line);display:flex;
+  align-items:center;justify-content:center;font-family:var(--mono);font-weight:800;
+  font-size:38px;letter-spacing:-.04em;color:var(--clear);position:relative;overflow:hidden}
+/* Photo sits over the initials. If the file is missing the img removes itself
+   and the initials show through, so the slide never renders a broken image. */
+.whoami .mark img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.whoami dl{display:grid;grid-template-columns:auto 1fr;gap:0;max-width:60ch}
+.whoami dt{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--dim);padding:13px 30px 13px 0;border-top:1px solid var(--line);white-space:nowrap}
+.whoami dd{font-size:clamp(17px,1.8vw,23px);padding:11px 0;border-top:1px solid var(--line)}
+.whoami dl>*:nth-last-child(-n+2){border-bottom:1px solid var(--line)}
+.disclaimer{font-family:var(--mono);font-size:13px;letter-spacing:.1em;color:var(--dim);margin-top:28px}
+
+/* ---- title-slide motif ----
+   Connected nodes at watermark weight. Present enough to set the subject,
+   quiet enough that nobody reads it as a graphic. Title slide only. */
+.slide:first-of-type::after{content:"";position:absolute;right:74px;bottom:104px;
+  width:190px;height:190px;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%20120%22%20fill%3D%22none%22%20stroke%3D%22%234FA8E8%22%20stroke-width%3D%221.5%22%3E%3Cpath%20d%3D%22M22%2086%20L60%2026%20L98%2086%22/%3E%3Cpath%20d%3D%22M22%2086%20L98%2086%22/%3E%3Cpath%20d%3D%22M60%2026%20L60%2086%22/%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%2226%22%20r%3D%226%22%20fill%3D%22%234FA8E8%22%20stroke%3D%22none%22/%3E%3Ccircle%20cx%3D%2222%22%20cy%3D%2286%22%20r%3D%226%22%20fill%3D%22%234FA8E8%22%20stroke%3D%22none%22/%3E%3Ccircle%20cx%3D%2298%22%20cy%3D%2286%22%20r%3D%226%22%20fill%3D%22%234FA8E8%22%20stroke%3D%22none%22/%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%2286%22%20r%3D%224%22%20fill%3D%22%234FA8E8%22%20stroke%3D%22none%22/%3E%3C/svg%3E") center/contain no-repeat;
+  opacity:.13;pointer-events:none}
+@media (max-width:800px){.slide:first-of-type::after{display:none}}
+
+/* ---- overview: the deck folded up ----
+   Press g or Escape. Every slide as a card, current one marked. The left
+   hairline on each card echoes the rail, so the grid reads as the same
+   object seen from further away rather than a separate screen. */
+#overview{position:fixed;inset:0;background:var(--ink);z-index:20;display:none;
+  padding:30px 34px 30px calc(var(--rail) + 34px);overflow-y:auto}
+#overview.on{display:block}
+#overview h4{font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--dim);font-weight:500;margin-bottom:20px}
+#ogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:14px}
+.ocard{background:var(--panel);border:1px solid var(--line);border-left-width:3px;
+  padding:14px 16px 16px;cursor:pointer;text-align:left;color:inherit;font:inherit;
+  display:flex;flex-direction:column;gap:9px;min-height:118px;
+  transition:border-color .12s,transform .12s}
+.ocard:hover{border-color:var(--dim);transform:translateY(-2px)}
+.ocard:focus-visible{outline:2px solid var(--clear);outline-offset:2px}
+.ocard .om{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);display:flex;justify-content:space-between;gap:10px}
+.ocard .om b{color:var(--paper);font-weight:700;font-variant-numeric:tabular-nums}
+.ocard .ot{font-size:16px;line-height:1.25;font-weight:600;letter-spacing:-.01em}
+.ocard.here{border-left-color:var(--clear)}
+.ocard.here .om b{color:var(--clear)}
+@media (max-width:800px){#overview{padding-left:calc(var(--rail) + 18px);padding-right:18px}}
+
+/* ---- jump buffer: type a slide number ---- */
+#jump{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;display:none;
+  font-family:var(--mono);font-size:64px;font-weight:800;letter-spacing:.04em;
+  background:var(--panel);border:2px solid var(--line);padding:18px 34px;
+  font-variant-numeric:tabular-nums}
+#jump.on{display:block}
+
+/* ---- footer readout ---- */
+#foot{position:fixed;left:calc(var(--rail) + 72px);right:80px;bottom:32px;display:flex;
+  justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:12px;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--dim);z-index:5}
+#bar{position:fixed;left:var(--rail);bottom:0;height:3px;background:var(--paper);width:0;
+  transition:width .3s ease;z-index:6}
+#notes{position:fixed;right:0;top:0;bottom:0;width:390px;background:var(--panel);
+  border-left:2px solid var(--line);padding:30px 28px;overflow:auto;display:none;z-index:7;
+  font-size:15px;line-height:1.6;color:var(--dim)}
+#notes.on{display:block}
+#notes h4{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--paper);margin-bottom:14px}
+#help{position:fixed;left:calc(var(--rail) + 72px);bottom:64px;font-family:var(--mono);font-size:12px;
+  color:var(--line);letter-spacing:.12em}
+@media (max-width:800px){:root{--rail:56px}.slide{padding:44px 28px 80px calc(var(--rail) + 28px)}
+  #foot{left:calc(var(--rail) + 28px);right:28px}#notes{width:100%}}

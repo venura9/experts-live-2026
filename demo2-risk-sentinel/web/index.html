@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Risk Sentinel</title>
+<style>
+  :root{
+    --ink:#0B121C; --panel:#131E2C; --line:#26374B;
+    --paper:#F2EFE7; --dim:#8FA3B8;
+    --clear:#66D6A6; --halt:#F0A536; --stop:#E8654B;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink);color:var(--paper);
+       font-family:ui-sans-serif,-apple-system,"Helvetica Neue",Arial,sans-serif;
+       padding:28px 32px}
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  h1{font-size:15px;letter-spacing:.28em;text-transform:uppercase;color:var(--dim);
+     margin:0 0 20px;font-weight:600}
+  .banner{display:none;background:var(--halt);color:#1A1206;padding:10px 16px;
+     font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:18px;font-size:14px}
+  .banner.on{display:block}
+  .status{border:2px solid var(--line);background:var(--panel);padding:34px 32px;margin-bottom:18px}
+  .verdict{font-size:clamp(48px,9vw,104px);line-height:.95;font-weight:800;letter-spacing:-.03em;margin:0}
+  .allowed .verdict{color:var(--clear)}
+  .denied .verdict{color:var(--stop)}
+  .code{font-size:15px;letter-spacing:.22em;color:var(--dim);margin:14px 0 6px}
+  .reason{font-size:clamp(18px,2.4vw,26px);line-height:1.35;max-width:60ch;margin:0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:18px}
+  .cell{border:1px solid var(--line);background:var(--panel);padding:16px 18px}
+  .cell .k{font-size:12px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase}
+  .cell .v{font-size:30px;font-weight:700;margin-top:6px}
+  ul{list-style:none;margin:0;padding:0}
+  li{border-left:3px solid var(--line);padding:8px 14px;margin-bottom:6px;
+     font-size:15px;color:var(--dim)}
+  li:first-child{border-left-color:var(--paper);color:var(--paper)}
+</style>
+</head>
+<body>
+  <h1>Risk Sentinel &middot; dry run</h1>
+  <div class="banner mono" id="banner">Mock mode &#183; no model is being called</div>
+
+  <div class="status denied" id="status">
+    <p class="verdict" id="verdict">WAITING</p>
+    <p class="code mono" id="code">&#183;</p>
+    <p class="reason" id="reason">Starting up.</p>
+  </div>
+
+  <div class="grid">
+    <div class="cell"><div class="k">Signal age</div><div class="v mono" id="age">&#183;</div></div>
+    <div class="cell"><div class="k">Confidence</div><div class="v mono" id="conf">&#183;</div></div>
+    <div class="cell"><div class="k">Orders placed</div><div class="v mono" id="placed">0</div></div>
+    <div class="cell"><div class="k">Orders blocked</div><div class="v mono" id="blocked">0</div></div>
+  </div>
+
+  <ul id="events"></ul>
+
+<script>
+async function tick(){
+  try{
+    const r = await fetch('/api/state',{cache:'no-store'});
+    const d = await r.json();
+    const g = d.gate || {}, s = d.signal || {}, c = d.counters || {};
+    const box = document.getElementById('status');
+    box.className = 'status ' + (g.allowed ? 'allowed' : 'denied');
+    document.getElementById('verdict').textContent = g.allowed ? 'TRADING' : 'BLOCKED';
+    document.getElementById('code').textContent = g.code || '&#183;';
+    document.getElementById('reason').textContent = g.reason || '&#183;';
+    document.getElementById('age').textContent = (d.age_s == null) ? '&#183;' : d.age_s + 's';
+    document.getElementById('conf').textContent = (s.confidence == null) ? '&#183;' : s.confidence;
+    document.getElementById('placed').textContent = c.placed ?? 0;
+    document.getElementById('blocked').textContent = c.blocked ?? 0;
+    document.getElementById('banner').className = 'banner mono' + (d.mock ? ' on' : '');
+    document.getElementById('events').innerHTML =
+      (d.events || []).map(e => '<li>' + e.replace(/[<>&]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[m])) + '</li>').join('');
+  }catch(e){ /* server not up yet */ }
+}
+tick(); setInterval(tick, 700);
+</script>
+</body>
+</html>

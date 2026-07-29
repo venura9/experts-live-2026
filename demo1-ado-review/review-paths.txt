@@ -1,0 +1,8 @@
+# Only these paths are reviewed. Scope control keeps runtime and token
+# counts predictable, and keeps the model away from files it has no rules for.
+src/main/mule/.*\.xml$
+src/main/resources/.*\.(properties|yaml|yml)$
+pom\.xml$
+
+# The RAML spec is deliberately out of scope. The prompt has no rules for
+# interface design, and reviewing a file you have no rules for produces noise.

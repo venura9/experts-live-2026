@@ -9,14 +9,21 @@ pool:
   name: local-ai       # self-hosted pool with Foundry Local installed
 
 variables:
-  # Use the FULL model ID from /v1/models, not the alias. Override in the
-  # pipeline variables UI when you swap models.
+  # What ai_review.py sends as the `model` field over raw HTTP. An alias works
+  # if the service resolves it; if you get a 404 from /v1/chat/completions, use
+  # the full versioned id from /v1/models instead (e.g. the one ending `:5`).
+  # Override in the pipeline variables UI when you swap models.
   FOUNDRY_MODEL: 'phi-4-mini'
   FOUNDRY_URL: 'http://localhost:5273/v1'
 
 steps:
   - checkout: self
-    fetchDepth: 0      # the diff needs history
+    fetchDepth: 0            # the diff needs history, not a shallow clone
+    persistCredentials: true # REQUIRED. Without this the agent strips the auth
+                             # header from .git/config after checkout, and any
+                             # `git fetch` in a later script step fails with
+                             # "could not read Password ... terminal prompts
+                             # disabled" and exit code 128.
 
   - script: |
       set -e
@@ -28,8 +35,32 @@ steps:
 
   - script: |
       set -e
-      git fetch origin "$SYSTEM_PULLREQUEST_TARGETBRANCH" --depth=200 || git fetch origin main
-      python3 scripts/ai_review.py --fail-on blocker
+
+      # In a PR build the target arrives as refs/heads/main. Strip the prefix.
+      TARGET="${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}"
+      TARGET="${TARGET:-main}"
+      echo "target branch: $TARGET"
+
+      # fetchDepth 0 already pulled full history, so only fetch if the ref is
+      # genuinely missing. Fetching unconditionally is what surfaced the
+      # credentials problem in the first place.
+      if ! git rev-parse --verify --quiet "origin/$TARGET" >/dev/null; then
+        echo "origin/$TARGET not present, fetching"
+        git fetch origin "$TARGET"
+      fi
+      git rev-parse --verify "origin/$TARGET" >/dev/null
+
+      # Manual runs have no pull request to comment on. Rather than crashing in
+      # post_thread on a missing SYSTEM_PULLREQUEST_PULLREQUESTID, fall back to
+      # printing findings into this log. Queue the pipeline against any branch
+      # and you get a full smoke test without opening a PR.
+      EXTRA=""
+      if [ -z "${SYSTEM_PULLREQUEST_PULLREQUESTID:-}" ]; then
+        echo "no pull request context: findings will print here instead of posting"
+        EXTRA="--dry-run"
+      fi
+
+      python3 scripts/ai_review.py --fail-on blocker --diff-base "origin/$TARGET" $EXTRA
     displayName: 'AI peer review (local inference)'
     env:
       FOUNDRY_URL: $(FOUNDRY_URL)

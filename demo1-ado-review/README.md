@@ -47,6 +47,19 @@ python3 scripts/ai_review.py --dry-run --diff-base origin/main
 Findings print to stdout, nothing is posted. This is also your fallback if ADO
 is unreachable on the day.
 
+## Smoke-testing a pipeline without opening a PR
+
+Both YAMLs detect the absence of PR context and add `--dry-run` themselves.
+Queue either one manually (Pipelines, then Run pipeline) against any branch and
+you get the whole path end to end — checkout, model load, diff, review, findings
+— printed into the build log instead of posted as threads. No PR needed, and
+nothing is written back to the repo.
+
+Two things to expect. `--diff-base` falls back to `origin/main` when there is no
+target branch, so queue against a branch that actually differs from `main` or
+you will correctly get `nothing in scope`. And the exit codes still apply: a
+manual run with blocking findings fails the build, which is the point.
+
 ## Exit codes
 
 | Code | Meaning |
@@ -64,6 +77,9 @@ is unreachable on the day.
 | 203 or 401 posting threads | Build service lacks Contribute to pull requests, step A6 |
 | Pipeline never triggers | You relied on `pr:` in YAML. Use branch policy, step A5 |
 | First inference very slow | Cold start. `foundry model load <id>` before you go on |
+| `SYSTEM_PULLREQUEST_TARGETBRANCH: unbound variable` | A manual run has no PR context, and the step runs under `set -u`. Both YAMLs now guard with `${VAR:-}` |
+| `could not read Password`, exit 128 | `persistCredentials: true` missing from `checkout: self` |
+| Hosted job loads the wrong model | The SDK script reads `FOUNDRY_ALIAS`, not `FOUNDRY_MODEL`. Setting the wrong one falls through to the `phi-4-mini` default and blows the timeout |
 
 
 ## Two versions of the reviewer

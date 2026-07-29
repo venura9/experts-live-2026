@@ -64,7 +64,14 @@ pool:
 
 variables:
   # Small on purpose. See consequence 2 above.
-  FOUNDRY_MODEL: qwen2.5-0.5b
+  #
+  # This MUST be FOUNDRY_ALIAS, not FOUNDRY_MODEL. ai_review_sdk.py reads
+  # FOUNDRY_ALIAS and ignores FOUNDRY_MODEL by design, because the catalog wants
+  # a bare alias and rejects the versioned id that ai_review.py needs. Naming it
+  # FOUNDRY_MODEL here silently fell through to the script's phi-4-mini default,
+  # which is a 3.8B model on 2 CPU cores: exactly the timeout that consequence 2
+  # warns about, while the log claimed qwen2.5-0.5b.
+  FOUNDRY_ALIAS: qwen2.5-0.5b
   # Where foundry-local-core keeps downloaded models, so we can cache it.
   FOUNDRY_CACHE: $(Pipeline.Workspace)/.foundry-cache
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip-cache
@@ -112,7 +119,7 @@ jobs:
       - task: Cache@2
         displayName: Cache Foundry Local model
         inputs:
-          key: 'foundry | "$(Agent.OS)" | "$(FOUNDRY_MODEL)"'
+          key: 'foundry | "$(Agent.OS)" | "$(FOUNDRY_ALIAS)"'
           path: $(FOUNDRY_CACHE)
 
       - script: |
@@ -125,15 +132,45 @@ jobs:
       - script: |
           set -euo pipefail
           df -h / | tail -1
+
+          # In a PR build the target arrives as refs/heads/main. Strip the
+          # prefix. The `:-` guards matter here because this step runs under
+          # `set -u`: on a manually queued run there is no PR context, and a
+          # bare $SYSTEM_PULLREQUEST_TARGETBRANCH aborts the step with
+          # "unbound variable" before the review ever starts.
+          TARGET="${SYSTEM_PULLREQUEST_TARGETBRANCH:-}"
+          TARGET="${TARGET#refs/heads/}"
+          TARGET="${TARGET:-main}"
+          echo "target branch: $TARGET"
+
+          # fetchDepth 0 already pulled full history, so only fetch if the ref
+          # is genuinely missing.
+          if ! git rev-parse --verify --quiet "origin/$TARGET" >/dev/null; then
+            echo "origin/$TARGET not present, fetching"
+            git fetch origin "$TARGET"
+          fi
+          git rev-parse --verify "origin/$TARGET" >/dev/null
+
+          # Manual runs have no pull request to comment on. Rather than
+          # crashing in post_thread on a missing SYSTEM_PULLREQUEST_PULLREQUESTID,
+          # print findings into this log instead. Queue the pipeline against any
+          # branch and you get a full smoke test without opening a PR.
+          EXTRA=""
+          if [ -z "${SYSTEM_PULLREQUEST_PULLREQUESTID:-}" ]; then
+            echo "no pull request context: findings will print here instead of posting"
+            EXTRA="--dry-run"
+          fi
+
           python3 scripts/ai_review_sdk.py \
-            --diff-base "$SYSTEM_PULLREQUEST_TARGETBRANCH" \
-            --fail-on blocker
+            --fail-on blocker \
+            --diff-base "origin/$TARGET" \
+            $EXTRA
         displayName: Review the diff with a local model
         env:
           # Mapped explicitly. Azure DevOps does not expose this to scripts
           # otherwise, and the PR comments will fail with a 203 without it.
           SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-          FOUNDRY_MODEL: $(FOUNDRY_MODEL)
+          FOUNDRY_ALIAS: $(FOUNDRY_ALIAS)
           # Point the SDK's model cache at the cached directory.
           FOUNDRY_LOCAL_CACHE_DIR: $(FOUNDRY_CACHE)
 

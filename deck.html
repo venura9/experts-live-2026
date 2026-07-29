@@ -126,6 +126,16 @@ pre .c{color:var(--dim)} pre .k{color:var(--signal)}
   font-variant-numeric:tabular-nums}
 #jump.on{display:block}
 
+.qrwrap{display:grid;grid-template-columns:1fr auto;gap:54px;align-items:center;margin-top:26px}
+/* Solid light backing. A QR rendered straight onto the dark background is
+   inverted, and plenty of Android scanners will not read it. */
+.qrwrap .qr{background:var(--paper);padding:20px;width:280px;height:280px;
+  display:flex;align-items:center;justify-content:center}
+.qrwrap .qr img{width:100%;height:100%;display:block}
+.qrwrap .qrurl{font-family:var(--mono);font-size:15px;letter-spacing:.02em;
+  color:var(--clear);margin-top:14px;text-align:center}
+@media (max-width:800px){.qrwrap{grid-template-columns:1fr}.qrwrap .qr{width:190px;height:190px}}
+
 /* ---- footer readout ---- */
 #foot{position:fixed;left:calc(var(--rail) + 72px);right:80px;bottom:32px;display:flex;
   justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:12px;
@@ -155,8 +165,8 @@ pre .c{color:var(--dim)} pre .k{color:var(--signal)}
 <div id="deck">
 
 <section class="slide" data-t="0:00" data-seg="Open" data-notes="Name, role, the community. Then the promise: by the end you will have seen a model review production code and stop a running system, with the wifi off. Do not oversell. Let the aeroplane mode do the talking.">
-  <div class="eyebrow">Foundry Local</div>
-  <h1>AI where your IP lives</h1>
+  <div class="eyebrow">Foundry Local &middot; Experts Live 2026</div>
+  <h1>Using AI to solve real life problems</h1>
   <p class="lede">Running language models inside the boundary, for the organisations that cannot send code anywhere else.</p>
 </section>
 
@@ -462,12 +472,18 @@ urllib.request.<span class="k">Request</span>(FOUNDRY_URL + <span class="k">"/ch
 <section class="slide" data-t="0:50" data-seg="Wrap" data-notes="Both demos are in the repo, working, stdlib only. Give the URL twice and leave this slide up through Q&A.">
   <div class="eyebrow">Everything shown today</div>
   <h2>Take it and run it</h2>
-  <ul class="pts">
-    <li><b>Docs</b> aka.ms/foundry-local-docs</li>
-    <li><b>Repo and samples</b> github.com/microsoft/Foundry-Local</li>
-    <li><b>Hands-on lab</b> github.com/Microsoft-foundry/foundry-local-lab</li>
-    <li><b>Both demos, stdlib only</b> github.com/venura9 &nbsp;<span style="color:var(--line)">(update this link)</span></li>
-  </ul>
+  <div class="qrwrap">
+    <ul class="pts">
+      <li><b>Everything from this talk</b> both demos, the deck, the theme, MIT licensed</li>
+      <li><b>Foundry Local docs</b> aka.ms/foundry-local-docs</li>
+      <li><b>Microsoft repo and samples</b> github.com/microsoft/Foundry-Local</li>
+      <li><b>Hands-on lab</b> github.com/Microsoft-foundry/foundry-local-lab</li>
+    </ul>
+    <div>
+      <div class="qr"><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1NDAiIGhlaWdodD0iNTQwIiBjbGFzcz0ic2Vnbm8iPjxnIHRyYW5zZm9ybT0ic2NhbGUoMTIpIj48cGF0aCBmaWxsPSIjZjRmMWVhIiBkPSJNMCAwaDQ1djQ1aC00NXoiLz48cGF0aCBjbGFzcz0icXJsaW5lIiBzdHJva2U9IiMwYjEyMWMiIGQ9Ik00IDQuNWg3bTEgMGgybTEgMGgzbTEgMGgybTMgMGgxbTEgMGgxbTEgMGg1bTEgMGg3bS0zNyAxaDFtNSAwaDFtMiAwaDFtMSAwaDJtMiAwaDNtMSAwaDdtMSAwaDJtMSAwaDFtNSAwaDFtLTM3IDFoMW0xIDBoM20xIDBoMW0yIDBoMW0xIDBoMW0xIDBoMW0xIDBoMW0xIDBoMW0xIDBoMm0yIDBoMm0xIDBoMW0zIDBoMW0xIDBoM20xIDBoMW0tMzcgMWgxbTEgMGgzbTEgMGgxbTEgMGgxbTIgMGgybTEgMGgzbTIgMGgxbTIgMGgybTIgMGgxbTMgMGgxbTEgMGgzbTEgMGgxbS0zNyAxaDFtMSAwaDNtMSAwaDFtMiAwaDJtMSAwaDFtMSAwaDJtMSAwaDFtMiAwaDNtNCAwaDJtMSAwaDFtMSAwaDNtMSAwaDFtLTM3IDFoMW01IDBoMW0yIDBoM20zIDBoMW0yIDBoMW0xIDBoMW0yIDBoMm0yIDBoMm0xIDBoMW01IDBoMW0tMzcgMWg3bTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGg3bS0yNiAxaDFtMSAwaDFtOCAwaDFtMSAwaDJtMiAwaDFtLTI3IDFoMW0xIDBoM20xIDBoMW0zIDBoMW0xIDBoMW0yIDBoMW0xIDBoM20xIDBoNW0xIDBoMW0zIDBoMW0yIDBoMW0tMzQgMWgzbTEgMGgxbTEgMGgxbTUgMGgxbTEgMGgzbTIgMGgxbTEgMGgxbTEgMGgxbTMgMGgxbTIgMGgxbTIgMGgxbS0zNiAxaDFtMSAwaDVtMSAwaDFtMyAwaDJtMiAwaDFtMSAwaDRtMiAwaDFtNCAwaDRtMSAwaDJtLTM2IDFoMW03IDBoNW0yIDBoMm0yIDBoMW0zIDBoNm0xIDBoM20xIDBoMm0tMzUgMWgxbTEgMGg0bTIgMGgxbTMgMGgxbTEgMGgxbTEgMGgybTIgMGgxbTIgMGgxbTEgMGgxbTEgMGgzbTMgMGgxbS0zNiAxaDRtMSAwaDFtMSAwaDJtMSAwaDNtMSAwaDJtNiAwaDJtNCAwaDFtMSAwaDJtMSAwaDRtLTM0IDFoMW0xIDBoMm0yIDBoMW0zIDBoMW0yIDBoMm0zIDBoM20xIDBoMW0zIDBoMW0xIDBoMm0xIDBoM20tMzYgMWgxbTEgMGgxbTEgMGgxbTEgMGgybTEgMGgybTEgMGgybTIgMGgxbTQgMGgxbTIgMGg3bTMgMGgxbS0zNiAxaDNtMyAwaDFtNSAwaDJtNCAwaDFtMSAwaDFtMiAwaDNtMiAwaDNtMiAwaDFtMSAwaDJtLTM2IDFoNW00IDBoMm0xIDBoMm01IDBoMm0yIDBoM20xIDBoNG0xIDBoNG0tMzYgMWgxbTEgMGgybTEgMGgybTIgMGgxbTYgMGgybTEgMGgybTEgMGgybTEgMGgxbTcgMGgzbS0zNyAxaDJtNSAwaDJtMSAwaDVtMSAwaDNtMSAwaDFtMyAwaDJtMiAwaDFtMiAwaDFtMyAwaDFtLTM1IDFoMm0zIDBoMW0xMCAwaDFtMSAwaDFtMyAwaDNtMSAwaDJtMSAwaDJtMSAwaDFtMSAwaDFtLTMzIDFoM20xIDBoM20xIDBoMm00IDBoMW0xIDBoMW0xIDBoNW0zIDBoMm01IDBoMW0tMzcgMWgxbTEgMGgybTIgMGgxbTEgMGgybTEgMGgxbTEgMGg0bTEgMGgxbTEgMGgxbTIgMGgxbTIgMGgxbTEgMGgzbTEgMGg1bS0zNiAxaDFtMSAwaDFtMyAwaDRtNSAwaDhtMSAwaDFtMyAwaDJtNCAwaDFtLTM2IDFoN20xIDBoMm0yIDBoMm0zIDBoMW0xIDBoM20xIDBoOG0yIDBoMW0xIDBoMm0tMzYgMWgxbTEgMGgxbTEgMGgxbTIgMGgxbTQgMGgzbTEgMGgxbTEgMGgzbTEgMGgxbTEgMGgybTIgMGgybTMgMGgzbS0zNyAxaDFtNCAwaDJtMyAwaDVtMSAwaDJtMiAwaDJtMiAwaDJtNCAwaDFtMSAwaDVtLTM2IDFoMW0yIDBoMW0yIDBoMm0xIDBoMW0xIDBoM20yIDBoMm0zIDBoMW0xIDBoNW0xIDBoMW0xIDBoMW0tMzMgMWgxbTEgMGgybTEgMGgybTMgMGg0bTEgMGg0bTIgMGgybTIgMGgxbTIgMGg1bTIgMGgybS0yOSAxaDFtNSAwaDFtMSAwaDFtMiAwaDNtMiAwaDJtMSAwaDJtMyAwaDFtMyAwaDFtLTM3IDFoN20zIDBoMW0xIDBoNG0zIDBoMW0yIDBoMW0xIDBoMm0xIDBoMm0xIDBoMW0xIDBoMW0xIDBoM20tMzcgMWgxbTUgMGgxbTEgMGgxbTMgMGgybTEgMGgybTMgMGgxbTEgMGgxbTIgMGgxbTIgMGgxbTMgMGgxbS0zMyAxaDFtMSAwaDNtMSAwaDFtMSAwaDNtMiAwaDVtMSAwaDFtMiAwaDFtMiAwaDFtMiAwaDZtLTM0IDFoMW0xIDBoM20xIDBoMW0zIDBoMW03IDBoNW0yIDBoMW0yIDBoMm0xIDBoMm0yIDBoMm0tMzcgMWgxbTEgMGgzbTEgMGgxbTEgMGgybTIgMGg0bTYgMGgxbTEgMGgxbTIgMGgxbTEgMGgxbTEgMGg0bTEgMGgxbS0zNyAxaDFtNSAwaDFtMiAwaDFtMSAwaDFtMiAwaDFtMSAwaDJtNCAwaDFtMiAwaDVtMSAwaDJtMiAwaDFtLTM2IDFoN202IDBoNG01IDBoMW0yIDBoMW0xIDBoM20yIDBoMW0yIDBoMiIvPjwvZz48L3N2Zz4K" alt="QR code to github.com/venura9/experts-live-2026"></div>
+      <div class="qrurl">venura9/experts-live-2026</div>
+    </div>
+  </div>
 </section>
 
 <section class="slide" data-t="0:51" data-seg="Wrap" data-notes="Thanks. Azure Builders Melbourne plug. Then questions.">

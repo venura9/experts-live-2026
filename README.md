@@ -1,10 +1,11 @@
-# AI where your IP lives
+# Experts Live 2026
+
+### AI where your IP lives
 
 Running language models on hardware you already control, for organisations that
 cannot send their code to an AI service.
 
-Talk given at **Experts Live**, Melbourne, 2026, by
-[@venura9](https://github.com/venura9).
+Session by [@venura9](https://github.com/venura9).
 
 Everything demonstrated on stage is in this repo and runs on your own machine.
 No API keys, no cloud account, no per-token cost.

@@ -80,10 +80,10 @@ talk to the model:
   sends raw HTTP to the OpenAI-compatible endpoint. You start the service,
   download the model, and read the port yourself.
 
-- `ai_review_sdk.py` hands an alias to `FoundryLocalManager`, which starts the
-  service, picks the best variant for your hardware, downloads if needed, loads
-  the model, and exposes the endpoint. Then the standard `openai` client does
-  the rest.
+- `ai_review_sdk.py` initializes `FoundryLocalManager` and hands an alias to its
+  catalog, which picks the best variant for your hardware, downloads if needed,
+  and loads the model. The model then hands back a chat client directly, so
+  there is no HTTP endpoint and no `openai` dependency at all.
 
 On stage, show the SDK version first because it is shorter and the audience can
 read it in one glance. Then show the pipeline YAML calling the stdlib version
@@ -95,7 +95,7 @@ and so the SDK's pinned onnxruntime cannot collide with anything else:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install foundry-local-sdk openai
+pip install 'foundry-local-sdk==1.2.3'
 python3 scripts/ai_review_sdk.py --dry-run --diff-base main
 ```
 
@@ -106,10 +106,10 @@ python3 scripts/ai_review_sdk.py --dry-run --diff-base main
 | `FOUNDRY_MODEL` | `ai_review.py` | the **full** model id from `/v1/models`, version suffix included |
 | `FOUNDRY_ALIAS` | `ai_review_sdk.py` | a short **alias** like `phi-4-mini` |
 
-`FoundryLocalManager` takes an alias and resolves the best variant for your
-hardware itself. Handing it a full versioned id fails. The SDK script therefore
-ignores `FOUNDRY_MODEL` entirely and defaults to `phi-4-mini` unless you set
-`FOUNDRY_ALIAS`.
+`manager.catalog.get_model()` takes an alias and resolves the best variant for
+your hardware itself. Handing it a full versioned id fails. The SDK script
+therefore ignores `FOUNDRY_MODEL` entirely and defaults to `phi-4-mini` unless
+you set `FOUNDRY_ALIAS`.
 
 The SDK script also starts Foundry Local lazily, inside `main()`. If it started
 on import, `--help` would download a model.

@@ -6,11 +6,11 @@ lifecycle (service start, model download, hardware detection, endpoint discovery
 is handled by FoundryLocalManager instead of env vars and raw HTTP.
 
 Show this version on your laptop. Show ai_review.py in the pipeline. The
-difference is the point: three lines to set up versus twenty, same review
+difference is the point: six lines to set up versus twenty, same review
 findings either way.
 
 Requires:
-    pip install foundry-local-sdk openai
+    pip install foundry-local-sdk
 
 Usage:
     python3 ai_review_sdk.py --dry-run --diff-base origin/main
@@ -27,10 +27,9 @@ import urllib.error
 import urllib.request
 
 try:
-    import openai
-    from foundry_local import FoundryLocalManager
+    from foundry_local_sdk import Configuration, FoundryLocalManager
 except ImportError:
-    sys.exit("missing dependencies. run: pip install foundry-local-sdk openai\n"
+    sys.exit("missing dependencies. run: pip install foundry-local-sdk\n"
              "or use scripts/ai_review.py, which needs nothing installed.")
 
 SEVERITY_ORDER = {"blocker": 0, "major": 1, "minor": 2, "info": 3}
@@ -38,44 +37,67 @@ BLOCKING = {"blocker"}
 
 
 # ---------------------------------------------------------------- setup
-# Three lines, once you are inside main(). The manager starts the service if it
-# isn't running, picks the best variant for your hardware, downloads it if
-# needed, loads it, and hands you the endpoint.
+# Six lines, once you are inside main(). The manager starts the service if it
+# isn't running, the catalog resolves an alias to the best variant for your
+# hardware, and the model downloads, loads, and hands you a chat client.
 #
 # Two things this deliberately does NOT do:
 #
-#   1. Run at import time. FoundryLocalManager() starts a service and can pull
-#      gigabytes of weights. Doing that on import means `--help` downloads a
-#      model, which is rude.
+#   1. Run at import time. Initializing the manager starts a service and can
+#      pull gigabytes of weights. Doing that on import means `--help` downloads
+#      a model, which is rude.
 #   2. Read FOUNDRY_MODEL. That variable holds the FULL model id with a version
 #      suffix (e.g. Phi-4-mini-instruct-generic-gpu:5) because the raw HTTP
-#      script needs it. The SDK wants an ALIAS. Passing a full id here fails.
-#      Use FOUNDRY_ALIAS if you want to override.
+#      script needs it. The catalog wants an ALIAS. Passing a full id here
+#      fails. Use FOUNDRY_ALIAS if you want to override.
 
 DEFAULT_ALIAS = "phi-4-mini"
 
-client = None
+chat = None
 model_id = None
 
 
 def init_model():
-    """Start Foundry Local and return (client, model_id). Called from main()."""
-    global client, model_id
+    """Start Foundry Local and return (chat, model_id). Called from main()."""
+    global chat, model_id
     alias = os.environ.get("FOUNDRY_ALIAS", DEFAULT_ALIAS)
     print(f"  starting Foundry Local for alias '{alias}' ...")
-    manager = FoundryLocalManager(alias)
-    client = openai.OpenAI(base_url=manager.endpoint, api_key="none")
-    model_id = manager.get_model_id()
-    print(f"  endpoint {manager.endpoint}")
+
+    FoundryLocalManager.initialize(Configuration(app_name="ai_review"))
+    manager = FoundryLocalManager.instance
+
+    model = manager.catalog.get_model(alias)
+    if not model.is_cached:
+        print("  downloading weights (first run only) ...")
+        model.download()
+    model.load()
+
+    chat = model.get_chat_client()
+    chat.settings.temperature = 0.0
+    chat.settings.max_tokens = 4096
+
+    model_id = getattr(model, "id", None) or getattr(model, "name", None) or alias
     print(f"  model    {model_id}")
-    return client, model_id
+    return chat, model_id
 
 
 # ---------------------------------------------------------------- git
+# Every git call runs with cwd=repo root. `git diff --name-only` prints paths
+# relative to the root, but a `-- <path>` pathspec resolves against the current
+# working directory. Mixing the two means that running this script from a
+# subdirectory silently matches nothing: every diff comes back empty, every
+# file is skipped, and the run reports zero findings and exits 0. A review that
+# did not happen must not look like a pass, so both calls get the same cwd.
 
-def changed_files(base, patterns):
+def repo_root():
+    return subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                          capture_output=True, text=True, check=True).stdout.strip()
+
+
+def changed_files(base, patterns, root):
     out = subprocess.run(["git", "diff", "--name-only", f"{base}...HEAD"],
-                         capture_output=True, text=True, check=True).stdout
+                         cwd=root, capture_output=True, text=True,
+                         check=True).stdout
     files = [f for f in out.splitlines() if f.strip()]
     if not patterns:
         return files
@@ -86,9 +108,10 @@ def changed_files(base, patterns):
     return keep
 
 
-def file_diff(base, path):
+def file_diff(base, path, root):
     return subprocess.run(["git", "diff", f"{base}...HEAD", "--", path],
-                          capture_output=True, text=True, check=True).stdout
+                          cwd=root, capture_output=True, text=True,
+                          check=True).stdout
 
 
 # ---------------------------------------------------------------- model
@@ -98,16 +121,10 @@ def review_file(system_prompt, path, diff, max_chars=12000):
         diff = diff[:max_chars] + "\n[diff truncated for review]"
 
     t0 = time.time()
-    response = client.chat.completions.create(
-        model=model_id,
-        temperature=0,
-        seed=42,
-        max_tokens=900,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"File: {path}\n\nUnified diff:\n{diff}"},
-        ],
-    )
+    response = chat.complete_chat([
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"File: {path}\n\nUnified diff:\n{diff}"},
+    ])
     text = response.choices[0].message.content
     return parse_findings(text, path), round(time.time() - t0, 1)
 
@@ -220,7 +237,8 @@ def main():
         with open(args.paths) as f:
             patterns = [l.strip() for l in f if l.strip() and not l.startswith("#")]
 
-    files = changed_files(base, patterns)
+    root = repo_root()
+    files = changed_files(base, patterns, root)
     print(f"  reviewing {len(files)} file(s) against {base}")
     if not files:
         print("  nothing in scope")
@@ -228,8 +246,9 @@ def main():
 
     findings, degraded = [], []
     for path in files:
-        diff = file_diff(base, path)
+        diff = file_diff(base, path, root)
         if not diff.strip():
+            print(f"  {path}  no textual diff, skipped")
             continue
         try:
             result, secs = review_file(system_prompt, path, diff)

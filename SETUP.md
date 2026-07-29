@@ -204,8 +204,8 @@ Note the two variables are different on purpose:
 | `FOUNDRY_MODEL` | `ai_review.py` | full id from `/v1/models`, version suffix included |
 | `FOUNDRY_ALIAS` | `ai_review_sdk.py` | short alias like `phi-4-mini` |
 
-`FoundryLocalManager` takes an alias and resolves the variant itself. A full
-versioned id fails.
+`manager.catalog.get_model()` takes an alias and resolves the variant itself. A
+full versioned id fails.
 
 ---
 

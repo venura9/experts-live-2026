@@ -32,10 +32,22 @@ BLOCKING = {"blocker"}
 
 
 # ---------------------------------------------------------------- git
+# Every git call runs with cwd=repo root. `git diff --name-only` prints paths
+# relative to the root, but a `-- <path>` pathspec resolves against the current
+# working directory. Mixing the two means that running this script from a
+# subdirectory silently matches nothing: every diff comes back empty, every
+# file is skipped, and the run reports zero findings and exits 0. A review that
+# did not happen must not look like a pass, so both calls get the same cwd.
 
-def changed_files(base, patterns):
+def repo_root():
+    return subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                          capture_output=True, text=True, check=True).stdout.strip()
+
+
+def changed_files(base, patterns, root):
     out = subprocess.run(["git", "diff", "--name-only", f"{base}...HEAD"],
-                         capture_output=True, text=True, check=True).stdout
+                         cwd=root, capture_output=True, text=True,
+                         check=True).stdout
     files = [f for f in out.splitlines() if f.strip()]
     if not patterns:
         return files
@@ -46,9 +58,10 @@ def changed_files(base, patterns):
     return keep
 
 
-def file_diff(base, path):
+def file_diff(base, path, root):
     return subprocess.run(["git", "diff", f"{base}...HEAD", "--", path],
-                          capture_output=True, text=True, check=True).stdout
+                          cwd=root, capture_output=True, text=True,
+                          check=True).stdout
 
 
 # ---------------------------------------------------------------- model
@@ -183,7 +196,8 @@ def main():
         with open(args.paths) as f:
             patterns = [l.strip() for l in f if l.strip() and not l.startswith("#")]
 
-    files = changed_files(base, patterns)
+    root = repo_root()
+    files = changed_files(base, patterns, root)
     print(f"  reviewing {len(files)} file(s) against {base}")
     if not files:
         print("  nothing in scope")
@@ -191,8 +205,9 @@ def main():
 
     findings, degraded = [], []
     for path in files:
-        diff = file_diff(base, path)
+        diff = file_diff(base, path, root)
         if not diff.strip():
+            print(f"  {path}  no textual diff, skipped")
             continue
         try:
             result, secs = review_file(system_prompt, path, diff)

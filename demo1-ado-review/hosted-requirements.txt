@@ -1,5 +1,7 @@
 # Dependencies for the hosted-agent pipeline (azure-pipelines-hosted.yml).
 # The self-hosted pipeline uses scripts/ai_review.py, which is stdlib only and
 # needs none of this.
-foundry-local-sdk
-openai
+# Pinned: 1.2.3 replaced the FoundryLocalManager(alias) constructor with
+# initialize(Configuration(...)), and scripts/ai_review_sdk.py targets the new
+# API. An unpinned install would break the moment the API moves again.
+foundry-local-sdk==1.2.3

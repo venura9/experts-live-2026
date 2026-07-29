@@ -80,9 +80,21 @@ FOUNDRY_URL=http://localhost:9999/v1 python3 run.py bot --cycles 3 --interval 0 
 
 ---
 
+## Setting it up yourself
+
+[`SETUP.md`](SETUP.md) walks from a bare machine to a working demo in seven
+phases, each with a checkpoint: prerequisites, Foundry Local, both demos
+locally, then the Azure DevOps org, agent, pipeline and branch policy.
+
+The two steps that catch everyone are in there explicitly: the `pr:` trigger
+does nothing on Azure Repos, so you need a branch policy, and the build service
+needs **Contribute to pull requests** or the comments fail silently at the very
+end of the run.
+
 ## Layout
 
 ```
+SETUP.md                      bare machine to working demo, seven phases
 deck.html                     the slides. One file, opens offline, no CDN
 theme/                        the deck theme, reusable for your own talks
 INSTALL.md                    platform matrix, install steps, pre-flight

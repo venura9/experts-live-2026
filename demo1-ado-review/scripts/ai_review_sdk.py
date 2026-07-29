@@ -26,23 +26,49 @@ import time
 import urllib.error
 import urllib.request
 
-import openai
-from foundry_local import FoundryLocalManager
+try:
+    import openai
+    from foundry_local import FoundryLocalManager
+except ImportError:
+    sys.exit("missing dependencies. run: pip install foundry-local-sdk openai\n"
+             "or use scripts/ai_review.py, which needs nothing installed.")
 
 SEVERITY_ORDER = {"blocker": 0, "major": 1, "minor": 2, "info": 3}
 BLOCKING = {"blocker"}
 
 
 # ---------------------------------------------------------------- setup
-# Three lines. The manager starts the service if it isn't running,
-# picks the best model variant for your hardware, downloads it if
-# needed, loads it, and hands you the endpoint. No env vars.
+# Three lines, once you are inside main(). The manager starts the service if it
+# isn't running, picks the best variant for your hardware, downloads it if
+# needed, loads it, and hands you the endpoint.
+#
+# Two things this deliberately does NOT do:
+#
+#   1. Run at import time. FoundryLocalManager() starts a service and can pull
+#      gigabytes of weights. Doing that on import means `--help` downloads a
+#      model, which is rude.
+#   2. Read FOUNDRY_MODEL. That variable holds the FULL model id with a version
+#      suffix (e.g. Phi-4-mini-instruct-generic-gpu:5) because the raw HTTP
+#      script needs it. The SDK wants an ALIAS. Passing a full id here fails.
+#      Use FOUNDRY_ALIAS if you want to override.
 
-MODEL_ALIAS = os.environ.get("FOUNDRY_MODEL", "phi-4-mini")
+DEFAULT_ALIAS = "phi-4-mini"
 
-manager = FoundryLocalManager(MODEL_ALIAS)
-client = openai.OpenAI(base_url=manager.endpoint, api_key="none")
-model_id = manager.get_model_id()
+client = None
+model_id = None
+
+
+def init_model():
+    """Start Foundry Local and return (client, model_id). Called from main()."""
+    global client, model_id
+    alias = os.environ.get("FOUNDRY_ALIAS", DEFAULT_ALIAS)
+    print(f"  starting Foundry Local for alias '{alias}' ...")
+    manager = FoundryLocalManager(alias)
+    client = openai.OpenAI(base_url=manager.endpoint, api_key="none")
+    model_id = manager.get_model_id()
+    print(f"  endpoint {manager.endpoint}")
+    print(f"  model    {model_id}")
+    return client, model_id
 
 
 # ---------------------------------------------------------------- git
@@ -179,6 +205,8 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="print findings, post nothing")
     ap.add_argument("--fail-on", default="blocker", choices=["blocker", "major", "minor", "never"])
     args = ap.parse_args()
+
+    init_model()
 
     base = args.diff_base
     if base.startswith("refs/heads/"):

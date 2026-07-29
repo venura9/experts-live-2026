@@ -90,12 +90,29 @@ read it in one glance. Then show the pipeline YAML calling the stdlib version
 and say why: a build agent in a locked-down network should not pip install
 anything at runtime.
 
-Install for the SDK version:
+Install for the SDK version. Use a venv so you do not pollute system python,
+and so the SDK's pinned onnxruntime cannot collide with anything else:
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install foundry-local-sdk openai
-python3 scripts/ai_review_sdk.py --dry-run --diff-base origin/main
+python3 scripts/ai_review_sdk.py --dry-run --diff-base main
 ```
+
+### The two env vars are different on purpose
+
+| Variable | Used by | Value |
+|---|---|---|
+| `FOUNDRY_MODEL` | `ai_review.py` | the **full** model id from `/v1/models`, version suffix included |
+| `FOUNDRY_ALIAS` | `ai_review_sdk.py` | a short **alias** like `phi-4-mini` |
+
+`FoundryLocalManager` takes an alias and resolves the best variant for your
+hardware itself. Handing it a full versioned id fails. The SDK script therefore
+ignores `FOUNDRY_MODEL` entirely and defaults to `phi-4-mini` unless you set
+`FOUNDRY_ALIAS`.
+
+The SDK script also starts Foundry Local lazily, inside `main()`. If it started
+on import, `--help` would download a model.
 
 
 ## Two pipelines

@@ -51,8 +51,8 @@ is unreachable on the day.
 
 Both YAMLs detect the absence of PR context and add `--dry-run` themselves.
 Queue either one manually (Pipelines, then Run pipeline) against any branch and
-you get the whole path end to end — checkout, model load, diff, review, findings
-— printed into the build log instead of posted as threads. No PR needed, and
+you get the whole path end to end: checkout, model load, diff, review, findings,
+printed into the build log instead of posted as threads. No PR needed, and
 nothing is written back to the repo.
 
 Two things to expect. `--diff-base` falls back to `origin/main` when there is no
@@ -67,6 +67,29 @@ manual run with blocking findings fails the build, which is the point.
 | 0 | Reviewed, nothing at or above the threshold |
 | 1 | Blocking findings, build fails, merge blocked |
 | 2 | Model unreachable or output unusable. **Fails closed.** A review that did not happen is not a pass |
+
+### What actually blocks a merge
+
+Findings are always posted. Only findings **at or above `--fail-on`** fail the
+build. All three pipelines pass `--fail-on blocker`, so:
+
+| Worst finding | `--fail-on blocker` (default) | `--fail-on major` | `--fail-on minor` |
+|---|---|---|---|
+| blocker | **fail** | **fail** | **fail** |
+| major | pass, comment only | **fail** | **fail** |
+| minor | pass, comment only | pass | **fail** |
+
+This is deliberate: style nits should not block a merge, and a reviewer that
+blocks on everything gets switched off within a week. It does mean a run whose
+worst finding is `major` goes green with comments attached.
+
+For the demo this is fine. `seed_flaws.py` plants three `blocker` defects (a
+hardcoded DB password, a listener on plain HTTP, and PII logged before the
+transform), so the build goes red. If a live run happens to come back with no
+blocker and you still want a red build on stage, queue it with `--fail-on major`
+rather than editing the threshold in the YAML. `--fail-on never` reviews and
+reports without ever failing, which is the right setting for a trial rollout on
+an existing repo.
 
 ## Troubleshooting
 
@@ -132,16 +155,29 @@ The SDK script also starts Foundry Local lazily, inside `main()`. If it started
 on import, `--help` would download a model.
 
 
-## Two pipelines
+## Three pipelines
 
-| File | Agent | Script | The claim it supports |
-|---|---|---|---|
-| `azure-pipelines.yml` | self-hosted, in your network | `ai_review.py` (stdlib) | Our code never leaves our network |
-| `azure-pipelines-hosted.yml` | Microsoft-hosted `ubuntu-latest` | `ai_review_sdk.py` (SDK) | We add no new vendor to our supply chain |
+| File | Agent | Script | Needs pip? | The claim it supports |
+|---|---|---|---|---|
+| `azure-pipelines.yml` | self-hosted, in your network | `ai_review.py` (stdlib) | no | Our code never leaves our network |
+| `azure-pipelines-sdk.yml` | self-hosted, in your network | `ai_review_sdk.py` (SDK) | pre-provisioned | Same, with less YAML |
+| `azure-pipelines-hosted.yml` | Microsoft-hosted `ubuntu-latest` | `ai_review_sdk.py` (SDK) | per run | We add no new vendor to our supply chain |
 
-Both run the model on the same machine as the build. Neither sends source code
-to a model vendor. They answer different restrictions, and the second is the
+All three run the model on the same machine as the build. None sends source code
+to a model vendor. They answer different restrictions, and the third is the
 more common one.
+
+The first two are worth showing side by side, because they differ by a whole
+step. `azure-pipelines.yml` spends one discovering the service port and
+resolving an alias into a versioned model id; the SDK does both in-process, so
+`azure-pipelines-sdk.yml` has no endpoint discovery and structurally cannot
+produce the stale-port `Errno 61` in the troubleshooting table above.
+
+The cost is a dependency. `azure-pipelines-sdk.yml` needs `foundry-local-sdk`
+installed on the agent, in a venv outside the workspace, and it verifies that
+rather than pip installing on the PR path. If your agents may not reach PyPI at
+all, the stdlib pipeline is the one that survives that rule, which is why it is
+still here.
 
 If your repo is already in Azure DevOps, Microsoft is already a processor for
 that code and it is already running in their cloud. Loading a model in-process

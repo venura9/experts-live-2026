@@ -1,0 +1,143 @@
+# AI peer review with the Foundry Local SDK, on a SELF-HOSTED agent.
+#
+# The third corner of the matrix:
+#
+#   azure-pipelines.yml         self-hosted   raw HTTP, stdlib only
+#   azure-pipelines-hosted.yml  MS-hosted     SDK
+#   this file                   self-hosted   SDK
+#
+# Why it earns its place on stage: put it next to azure-pipelines.yml and the
+# difference is a whole step. The raw-HTTP pipeline needs one just to discover
+# the service port and resolve an alias into a versioned model id, because
+# Foundry Local binds a fresh high port at every service start and the HTTP API
+# refuses aliases. The SDK does both in-process. This file therefore has no
+# endpoint discovery at all, and structurally cannot produce the
+# "[Errno 61] Connection refused" that a hardcoded port hands you.
+#
+# The trade, stated honestly: this agent needs foundry-local-sdk installed. That
+# is one-time provisioning, NOT a pip install on the PR path. A locked-down
+# build agent should not be reaching PyPI on every pull request, which is
+# exactly why the stdlib-only azure-pipelines.yml still exists.
+#
+# IMPORTANT: the `pr:` trigger keyword does NOT work for Azure Repos. Wire this
+# up as a branch policy build validation on main instead. See README step A5.
+#
+# LAYOUT ASSUMPTION (same as the other two)
+#   Runs from the root of the repo holding the MuleSoft app, with the review
+#   tooling copied in beside it: scripts/, prompts/, review-paths.txt.
+
+trigger: none          # PR validation only, never on plain pushes
+
+pool:
+  name: local-ai       # self-hosted pool with Foundry Local installed
+
+variables:
+  # An ALIAS, and it must stay one. The SDK resolves it to the best variant for
+  # this agent's hardware. A full versioned id fails here, which is the opposite
+  # of what azure-pipelines.yml needs. See the env-var table in README.
+  FOUNDRY_ALIAS: 'phi-4-mini'
+
+  # What blocks a merge. Findings are always posted; only findings at or ABOVE
+  # this severity fail the build. Order: blocker > major > minor > info.
+  #   blocker  default. Secrets, disabled TLS, PII in logs. Style nits do not
+  #            block, which is why people leave the reviewer switched on.
+  #   major    also blocks missing error handling, SNAPSHOT deps.
+  #   minor    strictest available.
+  #   never    review and report, never fail. Right for a trial rollout.
+  # Override per run from Pipelines > Run pipeline > Variables, no YAML edit.
+  FAIL_ON: 'blocker'
+
+  # The interpreter that has foundry-local-sdk installed. The SDK pins its own
+  # onnxruntime, so it belongs in a venv, and that venv must live OUTSIDE the
+  # workspace because the agent wipes the workspace between runs:
+  #
+  #   python3 -m venv ~/.venvs/foundry
+  #   ~/.venvs/foundry/bin/pip install 'foundry-local-sdk==1.2.3'
+  #
+  # then set this to ~/.venvs/foundry/bin/python.
+  PYTHON_BIN: 'python3'
+
+steps:
+  - checkout: self
+    fetchDepth: 0            # the diff needs history, not a shallow clone
+    persistCredentials: true # REQUIRED, same trap as the other pipelines.
+                             # Without it the agent strips the auth header from
+                             # .git/config after checkout and a later
+                             # `git fetch` dies with "could not read Password
+                             # ... terminal prompts disabled", exit 128.
+
+  - script: |
+      set -eo pipefail
+      PY="${PYTHON_BIN:-python3}"
+
+      echo "agent:  $(hostname)"
+      echo "user:   $(whoami)"
+      echo "python: $("$PY" -c 'import sys; print(sys.executable, sys.version.split()[0])')"
+
+      # Verify, deliberately do not install. Failing here is a provisioning
+      # problem to fix once on the agent, not something to paper over by adding
+      # a pip install to every pull request.
+      if ! "$PY" -c 'import foundry_local_sdk' 2>/dev/null; then
+        echo "foundry-local-sdk is not importable from $PY" >&2
+        echo "Provision this agent once:" >&2
+        echo "  python3 -m venv ~/.venvs/foundry" >&2
+        echo "  ~/.venvs/foundry/bin/pip install 'foundry-local-sdk==1.2.3'" >&2
+        echo "then set the PYTHON_BIN variable to ~/.venvs/foundry/bin/python" >&2
+        exit 1
+      fi
+      echo "sdk ready"
+    displayName: 'Verify the SDK is provisioned on this agent'
+    env:
+      PYTHON_BIN: $(PYTHON_BIN)
+
+  - script: |
+      set -euo pipefail
+      PY="${PYTHON_BIN:-python3}"
+
+      # In a PR build the target arrives as refs/heads/main. Strip the prefix.
+      # The `:-` guards matter because this step runs under `set -u`: on a
+      # manually queued run there is no PR context, and a bare
+      # $SYSTEM_PULLREQUEST_TARGETBRANCH aborts with "unbound variable".
+      TARGET="${SYSTEM_PULLREQUEST_TARGETBRANCH:-}"
+      TARGET="${TARGET#refs/heads/}"
+      TARGET="${TARGET:-main}"
+      echo "target branch: $TARGET"
+
+      # fetchDepth 0 already pulled full history, so only fetch if the ref is
+      # genuinely missing.
+      if ! git rev-parse --verify --quiet "origin/$TARGET" >/dev/null; then
+        echo "origin/$TARGET not present, fetching"
+        git fetch origin "$TARGET"
+      fi
+      git rev-parse --verify "origin/$TARGET" >/dev/null
+
+      # Manual runs have no pull request to comment on. Rather than crashing in
+      # post_thread on a missing SYSTEM_PULLREQUEST_PULLREQUESTID, print
+      # findings into this log. Queue the pipeline against any branch and you
+      # get a full smoke test without opening a PR.
+      EXTRA=""
+      if [ -z "${SYSTEM_PULLREQUEST_PULLREQUESTID:-}" ]; then
+        echo "no pull request context: findings will print here instead of posting"
+        EXTRA="--dry-run"
+      fi
+
+      # Note what is absent: no FOUNDRY_URL, no FOUNDRY_MODEL, no port to get
+      # wrong. The SDK starts the service, resolves the alias, downloads the
+      # weights if this agent has never seen them, and loads the model in
+      # process. First run on a cold agent pays the download; later runs do not.
+      "$PY" scripts/ai_review_sdk.py \
+        --fail-on "${FAIL_ON:-blocker}" \
+        --diff-base "origin/$TARGET" \
+        $EXTRA
+    displayName: 'AI peer review (SDK, local inference)'
+    env:
+      FAIL_ON: $(FAIL_ON)
+      FOUNDRY_ALIAS: $(FOUNDRY_ALIAS)
+      PYTHON_BIN: $(PYTHON_BIN)
+      # SYSTEM_ACCESSTOKEN is not exposed to scripts unless you map it here.
+      # Without it, posting threads fails with 203 or 401.
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+  # Fail closed. If the review step failed for ANY reason, including the model
+  # being unreachable or the SDK missing, the build fails and branch policy
+  # blocks the merge. A review that did not happen is not a pass.

@@ -72,6 +72,17 @@ variables:
   # which is a 3.8B model on 2 CPU cores: exactly the timeout that consequence 2
   # warns about, while the log claimed qwen2.5-0.5b.
   FOUNDRY_ALIAS: qwen2.5-0.5b
+
+  # What blocks a merge. Findings are always posted; only findings at or ABOVE
+  # this severity fail the build. Order: blocker > major > minor > info.
+  #   blocker  default. Secrets, disabled TLS, PII in logs. Style nits do not
+  #            block, which is why people leave the reviewer switched on.
+  #   major    also blocks missing error handling, SNAPSHOT deps.
+  #   minor    strictest available.
+  #   never    review and report, never fail. Right for a trial rollout.
+  # Override per run from Pipelines > Run pipeline > Variables, no YAML edit.
+  FAIL_ON: 'blocker'
+
   # Where foundry-local-core keeps downloaded models, so we can cache it.
   FOUNDRY_CACHE: $(Pipeline.Workspace)/.foundry-cache
   PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip-cache
@@ -162,11 +173,12 @@ jobs:
           fi
 
           python3 scripts/ai_review_sdk.py \
-            --fail-on blocker \
+            --fail-on "${FAIL_ON:-blocker}" \
             --diff-base "origin/$TARGET" \
             $EXTRA
         displayName: Review the diff with a local model
         env:
+          FAIL_ON: $(FAIL_ON)
           # Mapped explicitly. Azure DevOps does not expose this to scripts
           # otherwise, and the PR comments will fail with a 203 without it.
           SYSTEM_ACCESSTOKEN: $(System.AccessToken)

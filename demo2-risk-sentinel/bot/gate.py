@@ -6,11 +6,12 @@ Everything else in this project exists to serve that sentence. The gate is the
 only place that decides whether an order may be placed, and it returns False
 for every condition it does not explicitly understand.
 
-Four ways to be blocked:
-  1. No signal at all          -> blocked
-  2. Signal older than max_age -> blocked
-  3. Signal says halt          -> blocked
-  4. Confidence below floor    -> blocked
+Five ways to be blocked, in the order evaluate() checks them:
+  1. No record at all               -> blocked  NO_SIGNAL
+  2. Record older than max_age      -> blocked  STALE
+  3. Record carries no valid signal -> blocked  UNPARSED
+  4. Signal says halt               -> blocked  HALT
+  5. Confidence below floor         -> blocked  LOW_CONFIDENCE
 
 Note what is missing from that list: there is no code path where the model's
 output causes a trade to happen. A trade happens because the strategy wanted

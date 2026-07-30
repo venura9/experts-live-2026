@@ -27,12 +27,13 @@ cp -r "$TALK/demo1-ado-review/prompts" .
 cp "$TALK/demo1-ado-review/review-paths.txt" .
 cp "$TALK/demo1-ado-review/hosted-requirements.txt" .
 cp "$TALK/demo1-ado-review/azure-pipelines.yml" .
+cp "$TALK/demo1-ado-review/azure-pipelines-sdk.yml" .
 cp "$TALK/demo1-ado-review/azure-pipelines-hosted.yml" .
 
 git add -A && git commit -m "add order api"
 ```
 
-## The layout both pipelines expect
+## The layout all three pipelines expect
 
 ```
 order-api/
@@ -47,11 +48,13 @@ order-api/
   review-paths.txt                     copied
   hosted-requirements.txt              copied
   azure-pipelines.yml                  copied
+  azure-pipelines-sdk.yml              copied
   azure-pipelines-hosted.yml           copied
 ```
 
-Both pipelines run from the repo root and call `scripts/ai_review*.py`. Neither
-sets a `workingDirectory`. If you nest the tooling in a subfolder, both break.
+All three pipelines run from the repo root and call `scripts/ai_review*.py`.
+None sets a `workingDirectory`. If you nest the tooling in a subfolder, they
+break.
 
 `scripts/` and `prompts/` must stay siblings: the reviewer resolves its prompt
 as `../prompts/mulesoft-review.md` relative to its own location.

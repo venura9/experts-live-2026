@@ -86,16 +86,25 @@ that was wrong.
 rehearsal will feed the gate a fresh-looking CLEAR and hide the whole point.
 
 1. `python3 run.py classify --file scenarios/01_routine.txt`, then
-   `python3 run.py bot --cycles 8 --interval 2 --hold`. Dashboard up, gate
-   CLEAR, orders flowing.
+   `python3 run.py bot --cycles 8 --interval 2 --max-age 300 --hold`. Dashboard
+   up, gate CLEAR, orders flowing.
+   `--max-age 300` is there because the default is 60 seconds, so one
+   classification goes STALE a minute in and the gate blocks mid-demo for a
+   reason that is not the point you are making. Beat 5 shows STALE deliberately.
 2. `python3 run.py classify --file scenarios/03_exchange_incident.txt`. Model
-   halts. Restart the bot: every cycle now blocks with `HALT`. Dashboard red.
+   halts. Restart the bot with the same flags: every cycle now blocks with
+   `HALT`. Dashboard red.
 3. `python3 run.py ledger` shows the audit trail: append-only, fsynced, every
    decision written before anything else happens.
 4. **Kill the model.** `foundry service stop` in a second terminal while the bot
    is looping. Within one cycle the gate goes red with `UNPARSED`, and the
    placed counter stops moving. That is the beat people remember. Say: a
    control that fails open is not a control.
+5. **Show `STALE`.** `python3 run.py bot --cycles 3 --interval 0 --max-age 0
+   --no-web`. Every cycle blocks on age alone. This is the enterprise-relevant
+   one: the model is healthy and answering, and the system is still running on
+   expired information, which is the shape of most real incidents. The other
+   three states need something to be broken. This one does not.
 
 Beat 4 depends on the heartbeat added on 29 July 2026. Before that fix the bot
 only read the ledger, so killing the model changed nothing for 15 minutes and
@@ -115,7 +124,8 @@ must place zero orders.
 - [ ] Demo PR fresh, pipeline has NOT run against the latest commit
 - [ ] `cd demo2-risk-sentinel && python3 run.py reset` to clear the ledger
 - [ ] `python3 run.py doctor` prints READY
-- [ ] fail-closed check: `FOUNDRY_URL=http://localhost:9999/v1 python3 run.py bot --cycles 3 --interval 0 --no-web` places zero orders
+- [ ] fail-closed check: `FOUNDRY_URL=http://localhost:9999/v1 python3 run.py bot --cycles 3 --interval 0 --max-age 300 --no-web` places zero orders
+- [ ] `--max-age 300` on every live bot command, so a stage run does not go STALE after 60 seconds for a reason that is not the point
 - [ ] `python3 run.py reset` again before you walk on stage
 - [ ] Terminal font 18pt or larger, browser zoom 125 percent
 - [ ] Screen recordings of both demos on local disk

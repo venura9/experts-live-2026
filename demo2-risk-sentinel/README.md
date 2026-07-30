@@ -11,6 +11,9 @@ gets to say go.
 
 Standard library only. No pip install, nothing to break on venue wifi.
 
+For why the system is shaped this way, rather than how to run it, see
+[DESIGN.md](DESIGN.md).
+
 ## Layout
 
 ```

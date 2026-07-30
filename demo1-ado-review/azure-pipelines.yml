@@ -14,6 +14,16 @@ variables:
   # models.
   FOUNDRY_MODEL_ALIAS: 'phi-4-mini'
 
+  # What blocks a merge. Findings are always posted; only findings at or ABOVE
+  # this severity fail the build. Order: blocker > major > minor > info.
+  #   blocker  default. Secrets, disabled TLS, PII in logs. Style nits do not
+  #            block, which is why people leave the reviewer switched on.
+  #   major    also blocks missing error handling, SNAPSHOT deps.
+  #   minor    strictest available.
+  #   never    review and report, never fail. Right for a trial rollout.
+  # Override per run from Pipelines > Run pipeline > Variables, no YAML edit.
+  FAIL_ON: 'blocker'
+
   # FOUNDRY_URL and FOUNDRY_MODEL are deliberately NOT set here. Both are
   # machine-specific and are discovered at runtime by the next step. A
   # hardcoded value for either is a landmine that only goes off on someone
@@ -117,9 +127,13 @@ steps:
         EXTRA="--dry-run"
       fi
 
-      python3 scripts/ai_review.py --fail-on blocker --diff-base "origin/$TARGET" $EXTRA
+      python3 scripts/ai_review.py \
+        --fail-on "${FAIL_ON:-blocker}" \
+        --diff-base "origin/$TARGET" \
+        $EXTRA
     displayName: 'AI peer review (local inference)'
     env:
+      FAIL_ON: $(FAIL_ON)
       FOUNDRY_URL: $(FOUNDRY_URL)
       FOUNDRY_MODEL: $(FOUNDRY_MODEL)
       # SYSTEM_ACCESSTOKEN is not exposed to scripts unless you map it here.

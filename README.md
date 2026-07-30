@@ -78,6 +78,9 @@ FOUNDRY_URL=http://localhost:9999/v1 python3 run.py bot --cycles 3 --interval 0 
 # must read: placed 0
 ```
 
+The reasoning behind the design, including a fail-open window that testing found
+and closed, is in [demo2-risk-sentinel/DESIGN.md](demo2-risk-sentinel/DESIGN.md).
+
 ---
 
 ## Setting it up yourself

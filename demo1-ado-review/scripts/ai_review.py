@@ -212,7 +212,13 @@ def main():
         try:
             result, secs = review_file(system_prompt, path, diff)
         except urllib.error.URLError as e:
-            print(f"  ERROR  local model unreachable: {e}", file=sys.stderr)
+            # Name the endpoint. "Connection refused" on its own sends people
+            # hunting for a dead service when the real cause is usually a stale
+            # port: Foundry Local picks a new one at every service start.
+            print(f"  ERROR  local model unreachable at {FOUNDRY_URL}: {e}",
+                  file=sys.stderr)
+            print(f"  hint: confirm the port with 'foundry service status' and "
+                  f"export FOUNDRY_URL to match", file=sys.stderr)
             print("  failing closed: a review that did not happen is not a pass", file=sys.stderr)
             return 2
         if result is None:

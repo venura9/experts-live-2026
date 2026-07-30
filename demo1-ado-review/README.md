@@ -73,6 +73,7 @@ manual run with blocking findings fails the build, which is the point.
 | Symptom | Fix |
 |---|---|
 | `Request to local service failed ... 127.0.0.1:0` | `foundry service restart`, then re-read the port from `foundry service status` |
+| `local model unreachable ... [Errno 61] Connection refused` (111 on Linux) | Stale port. Foundry Local binds a new high port at every service start, so a hardcoded `5273` breaks on any other machine or restart. `azure-pipelines.yml` now reads it back from `foundry service status`; for local runs re-export `FOUNDRY_URL` |
 | Model not found | You used the alias. Use the full ID from `/v1/models` |
 | 203 or 401 posting threads | Build service lacks Contribute to pull requests, step A6 |
 | Pipeline never triggers | You relied on `pr:` in YAML. Use branch policy, step A5 |

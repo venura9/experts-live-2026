@@ -9,12 +9,22 @@ pool:
   name: local-ai       # self-hosted pool with Foundry Local installed
 
 variables:
-  # What ai_review.py sends as the `model` field over raw HTTP. An alias works
-  # if the service resolves it; if you get a 404 from /v1/chat/completions, use
-  # the full versioned id from /v1/models instead (e.g. the one ending `:5`).
-  # Override in the pipeline variables UI when you swap models.
-  FOUNDRY_MODEL: 'phi-4-mini'
-  FOUNDRY_URL: 'http://localhost:5273/v1'
+  # Which model we WANT. This is an alias, and it is only used to look up the
+  # real versioned id below. Override in the pipeline variables UI to swap
+  # models.
+  FOUNDRY_MODEL_ALIAS: 'phi-4-mini'
+
+  # FOUNDRY_URL and FOUNDRY_MODEL are deliberately NOT set here. Both are
+  # machine-specific and are discovered at runtime by the next step. A
+  # hardcoded value for either is a landmine that only goes off on someone
+  # else's agent:
+  #
+  #   port   Foundry Local binds a free high port chosen at service start. Not
+  #          5273, and not stable across restarts or machines. Two boxes here
+  #          reported 57127 and 59414. A stale port is exactly the
+  #          "local model unreachable ... [Errno 61] Connection refused".
+  #   model  The CLI takes aliases, the OpenAI-compatible API does not. It
+  #          wants the full versioned id, e.g. Phi-4-mini-instruct-generic-gpu:5.
 
 steps:
   - checkout: self
@@ -26,12 +36,59 @@ steps:
                              # disabled" and exit code 128.
 
   - script: |
-      set -e
+      set -eo pipefail
       echo "agent: $(hostname)"
-      curl -sf "$FOUNDRY_URL/models" | python3 -m json.tool | head -20
-    displayName: 'Verify local model endpoint'
+      echo "user:  $(whoami)"
+
+      # The agent service usually has a narrower PATH than your login shell, so
+      # say so plainly rather than failing later with something cryptic.
+      if ! command -v foundry >/dev/null 2>&1; then
+        echo "foundry CLI is not on PATH for user $(whoami)" >&2
+        echo "Foundry Local is installed per-user. Install it for the account" >&2
+        echo "the agent runs as, or add it to that account's PATH." >&2
+        exit 1
+      fi
+
+      # Read the port back from the service instead of assuming it. The status
+      # line looks like:
+      #   Model management service is running on http://127.0.0.1:57127/openai/status
+      ENDPOINT=""
+      for attempt in 1 2 3; do
+        STATUS="$(foundry service status 2>&1 || true)"
+        echo "$STATUS"
+        ENDPOINT="$(printf '%s\n' "$STATUS" | grep -oE 'http://[0-9.]+:[0-9]+' | head -1)"
+        [ -n "$ENDPOINT" ] && break
+        echo "no endpoint yet, starting the service (attempt $attempt)"
+        foundry service start || true
+        sleep 5
+      done
+
+      if [ -z "$ENDPOINT" ]; then
+        echo "could not discover the Foundry Local endpoint from service status" >&2
+        exit 1
+      fi
+
+      # Use the literal 127.0.0.1 the service reports, not localhost. Where
+      # localhost resolves to ::1 first and the listener is IPv4-only, you get
+      # back the same ECONNREFUSED you just finished fixing.
+      FOUNDRY_URL="$ENDPOINT/v1"
+      echo "endpoint: $FOUNDRY_URL"
+
+      # Resolve the alias to the full versioned id the API demands. Failing
+      # loudly here beats reviewing with whatever model happened to be first.
+      # Kept to one -c line on purpose: a multi-line python block indented for
+      # YAML would arrive at the interpreter pre-indented and die.
+      FOUNDRY_MODEL="$(curl -sf "$FOUNDRY_URL/models" \
+        | FOUNDRY_WANT="$FOUNDRY_MODEL_ALIAS" python3 -c 'import json,os,sys; want=os.environ["FOUNDRY_WANT"]; key=want.lower().replace("-",""); ids=[m.get("id","") for m in json.load(sys.stdin).get("data",[])]; hit=[i for i in ids if key in i.lower().replace("-","")]; print(hit[0] if hit else sys.exit("no model matching alias %r. /v1/models offers: %s" % (want, ", ".join(ids) or "nothing")))')"
+      echo "model:    $FOUNDRY_MODEL"
+
+      # Hand both to the later steps. Without task.setvariable these die with
+      # the shell that discovered them.
+      echo "##vso[task.setvariable variable=FOUNDRY_URL]$FOUNDRY_URL"
+      echo "##vso[task.setvariable variable=FOUNDRY_MODEL]$FOUNDRY_MODEL"
+    displayName: 'Discover local model endpoint and model id'
     env:
-      FOUNDRY_URL: $(FOUNDRY_URL)
+      FOUNDRY_MODEL_ALIAS: $(FOUNDRY_MODEL_ALIAS)
 
   - script: |
       set -e
